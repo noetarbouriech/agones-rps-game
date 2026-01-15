@@ -1,0 +1,11 @@
+apiVersion: skaffold/v4beta13
+kind: Config
+metadata:
+  name: game
+build:
+  artifacts:
+    - image: ghcr.io/noetarbouriech/agones-rps-game/game
+      ko: {}
+manifests:
+  rawYaml:
+    - ../k8s/fleet.yaml

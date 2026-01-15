@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/googleforgames/agones/refs/heads/release-1.54.0/examples/fleet.yaml
+apiVersion: agones.dev/v1
+kind: Fleet
+metadata:
+  name: rps-game
+spec:
+  replicas: 1
+  template:
+    spec:
+      ports:
+        - name: default
+          containerPort: 7654
+      template:
+        metadata:
+          labels:
+            app: rps-game
+        spec:
+          containers:
+            - name: rps-game
+              image: ghcr.io/noetarbouriech/agones-rps-game/game
+              resources:
+                requests:
+                  memory: 64Mi
+                  cpu: 20m
+                limits:
+                  memory: 64Mi
+                  cpu: 20m

@@ -1,0 +1,7 @@
+experimental_monorepo_root = true
+
+[settings]
+task.monorepo_depth = 1  # Only search 1 level deep
+
+[tools]
+kind = "latest"

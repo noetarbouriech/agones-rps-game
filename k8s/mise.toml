@@ -1,0 +1,16 @@
+[tools]
+helm = "latest"
+
+[tasks.init]
+description = "Create a Kubernetes cluster using kind"
+run = [
+    "kind create cluster --name agones-cluster",
+    "helm repo add agones https://agones.dev/chart/stable",
+    "helm install my-release --namespace agones-system --create-namespace agones/agones",
+]
+
+[tasks.cleanup]
+description = "Delete the Kind cluster and cleanup resources"
+run = [
+    "kind delete cluster --name agones-cluster"
+]
