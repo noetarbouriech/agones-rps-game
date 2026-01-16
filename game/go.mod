@@ -1,8 +1,11 @@
-module github.com/noetarbouriech/agones-rps-game
+module github.com/noetarbouriech/agones-rps-game/game
 
 go 1.25.5
 
-require agones.dev/agones v1.55.0
+require (
+	agones.dev/agones v1.55.0
+	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
+)
 
 require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.3 // indirect

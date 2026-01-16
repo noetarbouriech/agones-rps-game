@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+        <link
+            rel="stylesheet"
+            href="https://unpkg.com/papercss@1.9.2/dist/paper.min.css"
+        />
+        <title>Rock Paper Scissors</title>
+        <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    </head>
+    <body style="min-height: 100vh; display: flex; justify-content: center">
+        <div>
+            <h1>Rock Paper Scissors</h1>
+
+            <button onclick="send('rock')">🪨</button>
+            <button onclick="send('paper')">📄</button>
+            <button onclick="send('scissors')">✂️</button>
+
+            <div id="result"></div>
+        </div>
+
+        <script>
+            const ws = new WebSocket("ws://" + location.host + "/ws");
+
+            ws.onmessage = (e) => {
+                document.getElementById("result").innerHTML = e.data;
+            };
+
+            function send(choice) {
+                ws.send(choice);
+            }
+
+            window.addEventListener("beforeunload", () => {
+                ws.close();
+            });
+        </script>
+    </body>
+</html>

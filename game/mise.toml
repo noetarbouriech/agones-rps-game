@@ -2,6 +2,7 @@
 go = "1.25.5"
 ko = "v0.18.1"
 skaffold = "v2.17.1"
+"go:github.com/a-h/templ/cmd/templ" = "v0.3.977"
 
 [tasks.dev]
 description = "Run dev server on Kubernetes using skaffold"

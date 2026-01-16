@@ -9,7 +9,10 @@ spec:
     spec:
       ports:
         - name: default
-          containerPort: 7654
+          containerPort: 3000
+          protocol: TCP
+          portPolicy: Static
+          hostPort: 7777
       template:
         metadata:
           labels:
