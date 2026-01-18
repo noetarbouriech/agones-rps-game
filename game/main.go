@@ -4,6 +4,9 @@ import (
 	"context"
 	"embed"
 	"log"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"net/http"
 
@@ -35,7 +38,8 @@ func main() {
 		log.Fatalf("Could not connect to sdk: %v", err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	// Set up signal handling for graceful shutdown
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
 
 	// Inititalize the server
@@ -46,21 +50,62 @@ func main() {
 		cancel: cancel,
 	}
 
+	// Mark server ready
+	if err := sdk.Ready(); err != nil {
+		log.Fatalf("Failed to mark Ready: %v", err)
+	}
+
 	// Health Ping for Agones SDK
 	log.Println("Starting Health Ping")
 	go agones.HealthPing(s.sdk, s.ctx)
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	// Initialize HTTP server
+	httpServer := s.newHTTPServer()
+	go func() {
+		log.Println("Starting HTTP server on port 3000")
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Failed to start HTTP server: %v", err)
+		}
+	}()
+
+	// Wait for shutdown signal
+	<-ctx.Done()
+
+	// Create a context with a timeout for graceful shutdown
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Shutting down everything
+	log.Println("Shutting down...")
+	s.sdk.Shutdown()
+	s.game.Shutdown()
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
+		log.Fatalf("Failed to shutdown HTTP server: %v", err)
+	}
+}
+
+func (s *Server) newHTTPServer() *http.Server {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.FileServer(http.FS(index)).ServeHTTP(w, r)
 	})
-	http.HandleFunc("/ws", s.ws)
-	log.Println("Starting HTTP server on port 3000")
-	log.Fatal(http.ListenAndServe(":3000", nil))
+	mux.HandleFunc("/ws", s.ws)
+	return &http.Server{
+		Addr:         ":3000",
+		Handler:      mux,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  0, // I don't want my websockets to timeout
+	}
 }
 
 func (s *Server) ws(w http.ResponseWriter, r *http.Request) {
 	conn, _ := upgrader.Upgrade(w, r, nil)
 	defer conn.Close() // Ensure connection is always closed when the handler exits.
+
+	if s.game.Ended() == true {
+		return
+	}
 
 	player := game.NewPlayer(conn)
 	s.game.AddPlayer(player)
@@ -85,6 +130,9 @@ func (s *Server) ws(w http.ResponseWriter, r *http.Request) {
 	// Check if the two players have played
 	if s.game.Ended() {
 		s.game.SendResults()
+		time.Sleep(5 * time.Second)
+		s.game.Shutdown()
+		s.cancel() // Cancel the context to stop the game server
 		return
 	}
 
@@ -99,5 +147,4 @@ func (s *Server) ws(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
 }

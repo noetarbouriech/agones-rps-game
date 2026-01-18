@@ -9,11 +9,13 @@ import (
 type Game struct {
 	players []*Player
 	mu      sync.Mutex
+	ended   bool
 }
 
 func NewGame() *Game {
 	return &Game{
 		players: make([]*Player, 0, 2),
+		ended:   false,
 	}
 }
 
@@ -47,12 +49,17 @@ func (g *Game) PlayMove(player *Player, move string) {
 	defer g.mu.Unlock()
 	player.move = move
 	log.Printf("Player %p played %s", player, move)
+
+	// Set game as ended if both players have played
+	if len(g.players) == 2 && g.players[0].move != "" && g.players[1].move != "" {
+		g.ended = true
+	}
 }
 
 func (g *Game) Ended() bool {
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	return len(g.players) == 2 && g.players[0].move != "" && g.players[1].move != ""
+	return g.ended
 }
 
 func (g *Game) SendResults() {
@@ -82,6 +89,13 @@ func (g *Game) SendResults() {
 	default:
 		p1.Send(p1Msg + "<br><b>Draw 🤝</b>")
 		p2.Send(p2Msg + "<br><b>Draw 🤝</b>")
+	}
+}
+
+func (g *Game) Shutdown() {
+	for _, player := range g.players {
+		player.Send("Game is shutting down")
+		player.conn.Close()
 	}
 }
 
