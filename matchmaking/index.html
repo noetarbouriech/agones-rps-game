@@ -11,19 +11,44 @@
         <title>Rock Paper Scissors</title>
     </head>
     <body style="min-height: 100vh; display: flex; justify-content: center">
-        <div>
-            <h1>Looking for a game...</h1>
+        <div style="text-align: center">
+            <button id="findBtn" class="btn">Play</button>
+            <h1 id="status" style="display: none; margin-top: 1rem">
+                Looking for a game...
+            </h1>
         </div>
 
         <script>
-            const ws = new WebSocket("ws://" + location.host + "/ws");
+            let ws = null;
+            const playBtn = document.getElementById("findBtn");
+            const status = document.getElementById("status");
 
-            ws.onmessage = (e) => {
-                window.location.href = `${e.data}`;
-            };
+            function openMatchmaking() {
+                ws = new WebSocket("ws://" + location.host + "/ws");
+
+                status.style.display = "block";
+                findBtn.disabled = true;
+
+                ws.onmessage = (e) => {
+                    window.location.href = `${e.data}`;
+                };
+
+                ws.onclose = (ev) => {
+                    // if the connection closes before redirect, reset UI so user can retry
+                    status.style.display = "none";
+                    ws = null;
+                    findBtn.disabled = false;
+                };
+
+                ws.onerror = (err) => {
+                    console.error("WebSocket error", err);
+                };
+            }
+
+            playBtn.addEventListener("click", openMatchmaking);
 
             window.addEventListener("beforeunload", () => {
-                ws.close();
+                if (ws) ws.close();
             });
         </script>
     </body>
