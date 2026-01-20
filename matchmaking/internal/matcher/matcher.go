@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -59,7 +60,18 @@ func (m *Matcher) matchmakingHandler(msg *message.Message) error {
 		return nil
 	}
 
-	matchResult := "https://large-type.com/#matchfound"
+	var matchResult string
+	var err error
+	retryInterval := 5 * time.Second
+
+	for {
+		matchResult, err = AllocateGameServer()
+		if err == nil {
+			break
+		}
+		log.Printf("Failed to allocate game server: %v", err)
+		time.Sleep(retryInterval)
+	}
 
 	resultMsg := message.NewMessage(watermill.NewUUID(), []byte(matchResult))
 
@@ -76,6 +88,9 @@ func (m *Matcher) matchmakingHandler(msg *message.Message) error {
 		log.Printf("Failed to publish match result: %v", err)
 		return err
 	}
+
+	// remove waiting player
+	m.waiting = ""
 
 	// no error
 	return nil

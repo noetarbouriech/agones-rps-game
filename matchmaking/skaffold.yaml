@@ -1,0 +1,11 @@
+apiVersion: skaffold/v4beta13
+kind: Config
+metadata:
+  name: matchmaking
+build:
+  artifacts:
+    - image: ghcr.io/noetarbouriech/agones-rps-game/matchmaking
+      ko: {}
+manifests:
+  rawYaml:
+    - ../k8s/matchmaking.yaml

@@ -4,15 +4,13 @@ kind: Fleet
 metadata:
   name: rps-game
 spec:
-  replicas: 1
+  replicas: 3
   template:
     spec:
       ports:
         - name: default
           containerPort: 3000
           protocol: TCP
-          portPolicy: Static
-          hostPort: 7777
       template:
         metadata:
           labels:
@@ -21,10 +19,3 @@ spec:
           containers:
             - name: rps-game
               image: ghcr.io/noetarbouriech/agones-rps-game/game
-              resources:
-                requests:
-                  memory: 64Mi
-                  cpu: 20m
-                limits:
-                  memory: 64Mi
-                  cpu: 20m
