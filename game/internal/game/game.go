@@ -93,9 +93,13 @@ func (g *Game) SendResults() {
 }
 
 func (g *Game) Shutdown() {
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	for _, player := range g.players {
 		player.Send("Game is shutting down")
-		player.conn.Close()
+		if player.conn != nil {
+			player.conn.Close()
+		}
 	}
 }
 
