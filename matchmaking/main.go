@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/noetarbouriech/agones-rps-game/matchmaking/internal/matcher"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -53,18 +54,19 @@ func main() {
 	// Start Watermill router
 	router, _ := message.NewRouter(message.RouterConfig{}, logger)
 
-	router.AddConsumerHandler(
-		"matchmaking_handler", // Name of the handler
-		"matchmaking",         // Topic to subscribe to
-		s.sub,                 // Subscriber
-		s.matchmakingHandler,  // Handler function
-	)
+	// Initialize matcher
+	matcher := matcher.NewMatcher(s.pub, s.sub)
+	go func() {
+		log.Println("Starting Matcher")
+		if err := matcher.Run(ctx); err != nil {
+			log.Fatalf("Matcher router failed: %v", err)
+		}
+	}()
 
 	go func() {
 		if err := router.Run(ctx); err != nil {
 			panic(err)
 		}
-
 	}()
 
 	// Initialize HTTP server
@@ -85,10 +87,9 @@ func main() {
 
 	// Shutting down everything
 	log.Println("Shutting down...")
+	matcher.Shutdown()
 	router.Close()
-	if err := httpServer.Shutdown(shutdownCtx); err != nil {
-		log.Fatalf("Failed to shutdown HTTP server: %v", err)
-	}
+	httpServer.Shutdown(shutdownCtx)
 }
 
 func (s *Server) newHTTPServer() *http.Server {
@@ -149,24 +150,4 @@ func (s *Server) ws(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-}
-
-func (s *Server) matchmakingHandler(msg *message.Message) error {
-	// Process the matchmaking message
-	playerID := string(msg.Payload)
-	log.Printf("Processing player: %s", playerID)
-
-	// Simulate matchmaking logic (e.g., pairing players)
-	matchResult := fmt.Sprintf("https://large-type.com/#%s", playerID)
-
-	// Publish the match result to the player's specific topic
-	playerResultTopic := fmt.Sprintf("match_results_%s", playerID)
-	resultMsg := message.NewMessage(watermill.NewUUID(), []byte(matchResult))
-	if err := s.pub.Publish(playerResultTopic, resultMsg); err != nil {
-		log.Printf("Failed to publish match result: %v", err)
-		return err
-	}
-
-	// Acknowledge the original message
-	return nil
 }
