@@ -4,15 +4,20 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 )
 
+type Player string
+
 type Matcher struct {
-	pub    message.Publisher
-	sub    message.Subscriber
-	router *message.Router
+	pub     message.Publisher
+	sub     message.Subscriber
+	router  *message.Router
+	waiting Player
+	mu      *sync.Mutex
 }
 
 func NewMatcher(pub message.Publisher, sub message.Subscriber) *Matcher {
@@ -21,9 +26,11 @@ func NewMatcher(pub message.Publisher, sub message.Subscriber) *Matcher {
 	router, _ := message.NewRouter(message.RouterConfig{}, logger)
 
 	m := &Matcher{
-		pub:    pub,
-		sub:    sub,
-		router: router,
+		pub:     pub,
+		sub:     sub,
+		router:  router,
+		waiting: "",
+		mu:      &sync.Mutex{},
 	}
 
 	m.router.AddConsumerHandler(
@@ -44,18 +51,33 @@ func (m *Matcher) matchmakingHandler(msg *message.Message) error {
 	playerID := string(msg.Payload)
 	log.Printf("Processing player: %s", playerID)
 
-	// Simulate matchmaking logic (e.g., pairing players)
-	matchResult := fmt.Sprintf("https://large-type.com/#%s", playerID)
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
-	// Publish the match result to the player's specific topic
-	playerResultTopic := fmt.Sprintf("match_results_%s", playerID)
+	if m.waiting == "" {
+		m.waiting = Player(playerID)
+		return nil
+	}
+
+	matchResult := "https://large-type.com/#matchfound"
+
 	resultMsg := message.NewMessage(watermill.NewUUID(), []byte(matchResult))
+
+	// Publish the match result to the player's topic
+	playerResultTopic := fmt.Sprintf("match_results_%s", playerID)
 	if err := m.pub.Publish(playerResultTopic, resultMsg); err != nil {
 		log.Printf("Failed to publish match result: %v", err)
 		return err
 	}
 
-	// Acknowledge the original message
+	// Publish the match result to the waiting player's topic
+	waitingResultTopic := fmt.Sprintf("match_results_%s", m.waiting)
+	if err := m.pub.Publish(waitingResultTopic, resultMsg); err != nil {
+		log.Printf("Failed to publish match result: %v", err)
+		return err
+	}
+
+	// no error
 	return nil
 }
 
