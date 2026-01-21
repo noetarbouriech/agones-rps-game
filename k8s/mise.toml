@@ -9,6 +9,14 @@ run = [
     "helm install my-release --namespace agones-system --create-namespace agones/agones",
 ]
 
+[tasks.run]
+description = "Applies the Kubernetes manifests"
+run = [
+    "kubectl apply -f fleet.yaml",
+    "kubectl apply -f fleetautoscaler.yaml",
+    "kubectl apply -f matchmaking.yaml",
+]
+
 [tasks.cleanup]
 description = "Delete the Kind cluster and cleanup resources"
 run = [
