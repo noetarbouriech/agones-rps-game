@@ -4,7 +4,7 @@ kind: Fleet
 metadata:
   name: rps-game
 spec:
-  replicas: 3
+  replicas: 10
   template:
     spec:
       ports:

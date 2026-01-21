@@ -1,0 +1,18 @@
+apiVersion: "autoscaling.agones.dev/v1"
+kind: FleetAutoscaler
+metadata:
+  name: rps-game-autoscaler
+spec:
+  fleetName: rps-game
+  policy:
+    # type of the policy
+    type: Buffer
+    buffer:
+      # Size of a buffer of "ready" game server instances
+      bufferSize: 10
+      maxReplicas: 100
+  sync:
+    type: FixedInterval
+    fixedInterval:
+      # the time in seconds between each auto scaling
+      seconds: 5
