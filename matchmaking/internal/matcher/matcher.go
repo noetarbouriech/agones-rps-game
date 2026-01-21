@@ -61,12 +61,15 @@ func (m *Matcher) matchmakingHandler(msg *message.Message) error {
 	log.Printf("Processing player: %s", playerID)
 
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	if m.waiting == "" {
 		m.waiting = Player(playerID)
+		m.mu.Unlock()
 		return nil
 	}
+
+	waitingPlayer := m.waiting // copy waiting player to unlock mu
+	m.waiting = ""
+	m.mu.Unlock()
 
 	var matchResult string
 	var err error
@@ -91,14 +94,11 @@ func (m *Matcher) matchmakingHandler(msg *message.Message) error {
 	}
 
 	// Publish the match result to the waiting player's topic
-	waitingResultTopic := fmt.Sprintf("match_results_%s", m.waiting)
+	waitingResultTopic := fmt.Sprintf("match_results_%s", waitingPlayer)
 	if err := m.pub.Publish(waitingResultTopic, resultMsg); err != nil {
 		log.Printf("Failed to publish match result: %v", err)
 		return err
 	}
-
-	// remove waiting player
-	m.waiting = ""
 
 	// no error
 	return nil
