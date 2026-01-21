@@ -6,23 +6,20 @@ import (
 
 	v1 "agones.dev/agones/pkg/apis/allocation/v1"
 	"agones.dev/agones/pkg/client/clientset/versioned"
-	"agones.dev/agones/pkg/util/runtime"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 )
 
-func AllocateGameServer() (string, error) {
+func NewAgonesClient() (*versioned.Clientset, error) {
 	config, err := rest.InClusterConfig()
-	logger := runtime.NewLoggerWithSource("allocator")
 	if err != nil {
-		logger.WithError(err).Fatal("Could not create in-cluster config")
+		return nil, fmt.Errorf("failed to create in-cluster config: %w", err)
 	}
 
-	agonesClient, err := versioned.NewForConfig(config)
-	if err != nil {
-		logger.WithError(err).Fatal("Could not create Agones clientset")
-	}
+	return versioned.NewForConfig(config)
+}
 
+func (m *Matcher) AllocateGameServer(ctx context.Context) (string, error) {
 	// Create GameServerAllocation
 	allocation := &v1.GameServerAllocation{
 		ObjectMeta: metav1.ObjectMeta{
@@ -40,7 +37,7 @@ func AllocateGameServer() (string, error) {
 		},
 	}
 
-	result, err := agonesClient.AllocationV1().GameServerAllocations("default").Create(context.TODO(), allocation, metav1.CreateOptions{})
+	result, err := m.agonesClient.AllocationV1().GameServerAllocations("default").Create(ctx, allocation, metav1.CreateOptions{})
 	if err != nil {
 		return "", fmt.Errorf("failed to allocate GameServer: %w", err)
 	}

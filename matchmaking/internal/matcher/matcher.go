@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"agones.dev/agones/pkg/client/clientset/versioned"
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 )
@@ -14,11 +15,12 @@ import (
 type Player string
 
 type Matcher struct {
-	pub     message.Publisher
-	sub     message.Subscriber
-	router  *message.Router
-	waiting Player
-	mu      *sync.Mutex
+	pub          message.Publisher
+	sub          message.Subscriber
+	router       *message.Router
+	waiting      Player
+	mu           *sync.Mutex
+	agonesClient *versioned.Clientset
 }
 
 func NewMatcher(pub message.Publisher, sub message.Subscriber) *Matcher {
@@ -26,12 +28,18 @@ func NewMatcher(pub message.Publisher, sub message.Subscriber) *Matcher {
 
 	router, _ := message.NewRouter(message.RouterConfig{}, logger)
 
+	agonesClient, err := NewAgonesClient()
+	if err != nil {
+		log.Fatalf("Could not create Agones clientset: %v", err)
+	}
+
 	m := &Matcher{
-		pub:     pub,
-		sub:     sub,
-		router:  router,
-		waiting: "",
-		mu:      &sync.Mutex{},
+		pub:          pub,
+		sub:          sub,
+		router:       router,
+		waiting:      "",
+		mu:           &sync.Mutex{},
+		agonesClient: agonesClient,
 	}
 
 	m.router.AddConsumerHandler(
@@ -65,7 +73,7 @@ func (m *Matcher) matchmakingHandler(msg *message.Message) error {
 	retryInterval := 5 * time.Second
 
 	for {
-		matchResult, err = AllocateGameServer()
+		matchResult, err = m.AllocateGameServer(msg.Context())
 		if err == nil {
 			break
 		}
