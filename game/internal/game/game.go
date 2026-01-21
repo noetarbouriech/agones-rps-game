@@ -20,23 +20,25 @@ func NewGame() *Game {
 }
 
 func (g *Game) AddPlayer(player *Player) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
 	if len(g.players) >= 2 || player == nil {
 		return
 	}
 
-	g.mu.Lock()
-	defer g.mu.Unlock()
 	g.players = append(g.players, player)
 	log.Printf("Player %p added to game", player)
 }
 
 func (g *Game) RemovePlayer(player *Player) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
 	if len(g.players) == 0 || player == nil {
 		return
 	}
 
-	g.mu.Lock()
-	defer g.mu.Unlock()
 	idx := slices.Index(g.players, player)
 	if idx != -1 {
 		g.players = slices.Delete(g.players, idx, idx+1)
