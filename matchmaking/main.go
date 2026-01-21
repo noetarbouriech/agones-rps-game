@@ -111,14 +111,12 @@ func (s *Server) ws(w http.ResponseWriter, r *http.Request) {
 	conn, _ := upgrader.Upgrade(w, r, nil)
 	defer conn.Close() // Ensure connection is always closed when the handler exits.
 
-	// Simulate a player joining matchmaking
-	playerID := rand.Text()
-	matchmakingTopic := "matchmaking"
+	playerID := rand.Text() // random player ID
 	playerResultTopic := fmt.Sprintf("match_results_%s", playerID)
 
 	// Publish the matchmaking request
 	msg := message.NewMessage(watermill.NewUUID(), []byte(playerID))
-	if err := s.pub.Publish(matchmakingTopic, msg); err != nil {
+	if err := s.pub.Publish("matchmaking", msg); err != nil {
 		log.Printf("Failed to publish matchmaking message: %v", err)
 		return
 	}
@@ -131,23 +129,21 @@ func (s *Server) ws(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Wait for a match result
-	for {
-		select {
-		case <-s.ctx.Done():
-			return // Exit if the server is shutting down
-		case msg := <-messages:
-			matchResult := string(msg.Payload)
-			log.Printf("Match found for player %s: %s", playerID, matchResult)
+	select {
+	case <-s.ctx.Done():
+		return // Exit if the server is shutting down
+	case msg := <-messages:
+		matchResult := string(msg.Payload)
+		log.Printf("Match found for player %s: %s", playerID, matchResult)
 
-			// Send the match result back to the WebSocket client
-			if err := conn.WriteMessage(websocket.TextMessage, []byte(matchResult)); err != nil {
-				log.Printf("Failed to send match result: %v", err)
-				return
-			}
-
-			// Acknowledge the message and exit
-			msg.Ack()
+		// Send the match result back to the WebSocket client
+		if err := conn.WriteMessage(websocket.TextMessage, []byte(matchResult)); err != nil {
+			log.Printf("Failed to send match result: %v", err)
 			return
 		}
+
+		// Acknowledge the message and exit
+		msg.Ack()
+		return
 	}
 }
