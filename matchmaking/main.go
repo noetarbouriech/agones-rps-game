@@ -51,21 +51,12 @@ func main() {
 		cancel: cancel,
 	}
 
-	// Start Watermill router
-	router, _ := message.NewRouter(message.RouterConfig{}, logger)
-
 	// Initialize matcher
 	matcher := matcher.NewMatcher(s.pub, s.sub)
 	go func() {
 		log.Println("Starting Matcher")
 		if err := matcher.Run(ctx); err != nil {
 			log.Fatalf("Matcher router failed: %v", err)
-		}
-	}()
-
-	go func() {
-		if err := router.Run(ctx); err != nil {
-			panic(err)
 		}
 	}()
 
@@ -88,7 +79,6 @@ func main() {
 	// Shutting down everything
 	log.Println("Shutting down...")
 	matcher.Shutdown()
-	router.Close()
 	httpServer.Shutdown(shutdownCtx)
 }
 
