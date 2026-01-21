@@ -1,0 +1,6 @@
+[tools]
+k6 = "latest"
+
+[tasks.test]
+description = "Run load test"
+run = "docker run --rm --network=host -i grafana/k6 run -< script.js"
