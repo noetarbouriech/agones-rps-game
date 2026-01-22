@@ -4,6 +4,9 @@ A rock paper scissors game and a matchmaking service made in Go deployed on Kube
 
 ![Matchmaking and Game demo](https://github.com/user-attachments/assets/03d1f8da-2ab8-4fdd-bd0a-46b4a3e0fa30)
 
+> [!NOTE]
+> You can find more information about this project on this blog post: [Making and Scaling a Game Server in Kubernetes using Agones](https://noe-t.dev/posts/making-and-scaling-a-game-server-in-k8s-using-agones/).
+
 ## Overview
 
 The repo contains two services:
